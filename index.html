@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6654d9">
+  <meta name="description" content="JSON viewer with reusable field selections.">
+  <title>Universal JSON Viewer</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./src/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to viewer</a>
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="Universal JSON Viewer home">
+      <img src="./favicon.svg" width="36" height="36" alt="">
+      <span>Universal<span class="brand-sub">JSON VIEWER</span></span>
+    </a>
+    <div id="header-document" class="header-document" hidden>
+      <h1 id="document-title" aria-describedby="document-meta">Untitled JSON</h1>
+      <p id="document-meta" class="sr-only"></p>
+    </div>
+    <div class="header-actions">
+      <button class="button ghost" id="example-button">Example</button>
+      <button class="button primary" id="open-button"><span aria-hidden="true">＋</span> Open JSON</button>
+      <div id="header-document-actions" class="document-actions" hidden>
+        <button class="icon-button" id="document-menu" aria-label="More document actions" aria-expanded="false" aria-controls="more-menu">···</button>
+        <div id="more-menu" class="more-menu" hidden><button id="source-download">Download original JSON</button><button id="clear-document">Close document</button></div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+      <h1 id="welcome-title">Open JSON</h1>
+      <div class="intake-grid">
+        <button id="drop-zone" class="drop-zone" type="button">
+          <span class="upload-symbol" aria-hidden="true">↥</span>
+          <strong>Upload JSON</strong>
+        </button>
+        <div class="paste-card"><label for="initial-json">Paste JSON</label><textarea id="initial-json" spellcheck="false"></textarea><div class="paste-footer"><button class="button primary small" id="initial-load">Open</button></div></div>
+      </div>
+    </section>
+
+    <section id="workspace" class="workspace" hidden aria-label="JSON workspace">
+      <div class="work-grid">
+        <aside id="fields-panel" class="field-panel" aria-label="Field selector">
+          <div class="panel-heading"><h2>Fields <span id="field-count" class="count-badge">0</span></h2><button id="reset-selection" class="text-button">Reset</button></div>
+          <div class="selection-controls">
+            <label class="schema-label" for="schema-select">Saved schema</label>
+            <div class="schema-picker"><select id="schema-select"><option value="">Custom selection</option></select><button class="button outline small" id="schema-save">Save</button><button class="button outline small" id="schema-edit" disabled>Edit</button></div>
+            <div class="selection-actions"><button class="button outline small" id="selection-copy"><span aria-hidden="true">⧉</span> Copy selection</button><button class="button outline small" id="selection-open">Paste selection</button></div>
+            <div class="selection-file-actions"><button class="text-button" id="selection-import">Import file</button><button class="text-button" id="selection-download">Download selection</button></div>
+          </div>
+          <div class="field-tools"><label class="sr-only" for="field-search">Find a field</label><div class="search-wrap"><span aria-hidden="true">⌕</span><input id="field-search" type="search" placeholder="Find a field…" autocomplete="off"></div><label class="sr-only" for="selection-mode">Field visibility mode</label><select id="selection-mode"><option value="all">Show all except hidden</option><option value="selected">Show only selected fields</option></select></div>
+          <div class="field-legend"><span>FIELD / TYPE</span><span>SHOW · HIDE</span></div>
+          <div id="field-tree" class="field-tree" aria-label="Discovered fields"></div>
+        </aside>
+        <div id="panel-divider" class="panel-divider" role="separator" tabindex="0" aria-label="Resize Fields sidebar" aria-orientation="vertical" aria-controls="fields-panel" aria-valuemin="240" aria-valuemax="1000" aria-valuenow="320" title="Drag to resize. Double-click to reset."></div>
+        <section class="viewer-panel" aria-label="Document viewer">
+          <div class="viewer-toolbar"><div class="view-tabs" role="tablist" aria-label="View format"><button id="readable-tab" role="tab" aria-selected="true" aria-controls="viewer" data-view="readable">Readable</button><button id="table-tab" role="tab" aria-selected="false" aria-controls="viewer" data-view="table" tabindex="-1">Table</button><button id="source-tab" role="tab" aria-selected="false" aria-controls="viewer" data-view="source" tabindex="-1">Original JSON</button></div><div class="viewer-tools"><button class="icon-button" id="collapse-button" aria-label="Collapse expanded groups" title="Collapse groups">⊟</button></div></div>
+          <div id="filter-toolbar" class="filter-toolbar"><div class="search-wrap content-search"><span aria-hidden="true">⌕</span><label class="sr-only" for="content-search">Search visible fields and values</label><input id="content-search" type="search" placeholder="Search visible data…" autocomplete="off"><kbd>/</kbd></div><label class="collection-label" for="collection-select">Collection<select id="collection-select"><option value="">Whole document</option></select></label></div>
+          <div class="view-status"><span id="visible-count">All fields visible</span><button id="rules-toggle" class="text-button" aria-expanded="false" aria-controls="rules-panel">No selection rules</button></div>
+          <div id="rules-panel" class="rules-panel" hidden></div>
+          <div id="viewer" class="viewer" role="tabpanel" aria-labelledby="readable-tab" tabindex="0"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <input id="file-input" type="file" accept=".json,.jsonl,application/json,application/x-ndjson" hidden>
+  <input id="selection-file" type="file" accept=".json,application/json" hidden>
+
+  <dialog id="schema-dialog" class="modal">
+    <form id="schema-form"><div class="modal-header"><h2 id="schema-dialog-title">Save schema</h2><button type="button" class="icon-button" data-close="schema-dialog" aria-label="Close schema dialog">×</button></div><label class="schema-name-label" for="schema-name">Name</label><input id="schema-name" class="schema-name-input" type="text" maxlength="80" autocomplete="off" required><p id="schema-error" class="inline-error" role="alert" hidden></p><div class="modal-footer"><button id="schema-delete" class="button danger" type="button" hidden>Delete</button><button type="button" class="button ghost" data-close="schema-dialog">Cancel</button><button id="schema-submit" class="button primary" type="submit">Save schema</button></div></form>
+  </dialog>
+  <dialog id="import-dialog" class="modal">
+    <form id="import-form"><div class="modal-header"><h2>Paste field selection</h2><button type="button" class="icon-button" data-close="import-dialog" aria-label="Close selection dialog">×</button></div><label for="selection-text" class="sr-only">Field selection JSON</label><textarea id="selection-text" spellcheck="false" required></textarea><p id="selection-error" class="inline-error" role="alert" hidden></p><div class="modal-footer"><button type="button" class="button ghost" data-close="import-dialog">Cancel</button><button class="button primary" type="submit">Apply selection</button></div></form>
+  </dialog>
+  <dialog id="input-dialog" class="modal">
+    <form id="input-form"><div class="modal-header"><h2>Open JSON</h2><button type="button" class="icon-button" data-close="input-dialog" aria-label="Close JSON dialog">×</button></div><button type="button" id="choose-file" class="button outline full">Choose file</button><label for="document-text" class="input-label">Paste JSON</label><textarea id="document-text" spellcheck="false"></textarea><p id="input-error" class="inline-error" role="alert" hidden></p><div class="modal-footer"><button type="button" class="button ghost" data-close="input-dialog">Cancel</button><button class="button primary" type="submit">Open</button></div></form>
+  </dialog>
+  <dialog id="copy-dialog" class="modal"><div class="modal-header"><h2 id="copy-title">Copy field selection</h2><button type="button" class="icon-button" data-close="copy-dialog" aria-label="Close copy dialog">×</button></div><textarea id="copy-text" readonly aria-label="Text to copy" spellcheck="false"></textarea><div class="modal-footer"><button class="button primary" data-close="copy-dialog">Done</button></div></dialog>
+  <dialog id="inspect-dialog" class="modal wide"><div class="modal-header"><h2 id="inspect-title">Inspect value</h2><button type="button" class="icon-button" data-close="inspect-dialog" aria-label="Close value inspector">×</button></div><div id="inspect-content" class="inspect-content"></div></dialog>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <div id="busy" class="busy" role="status" hidden><span class="spinner" aria-hidden="true"></span><span id="busy-message">Reading your JSON…</span></div>
+  <noscript><p class="noscript">JavaScript is required.</p></noscript>
+</body>
+</html>

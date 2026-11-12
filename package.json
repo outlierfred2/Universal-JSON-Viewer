@@ -1,0 +1,13 @@
+{
+  "name": "universal-json-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A browser-local JSON viewer with reusable field selections.",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

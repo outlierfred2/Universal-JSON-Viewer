@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "mode": "selected",
+  "include": ["$.events[*].role", "$.events[*].content"],
+  "exclude": ["$.events[*].content[*].type"],
+  "collection": "$.events"
+}

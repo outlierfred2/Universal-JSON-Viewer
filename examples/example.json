@@ -1,0 +1,108 @@
+{
+  "project": {
+    "name": "A little bit of everything",
+    "environment": "demo",
+    "active": true
+  },
+  "events": [
+    {
+      "role": "user",
+      "content": "Find a quiet place to work in Brooklyn.",
+      "timestamp": "2026-11-12T09:30:00Z",
+      "metadata": {
+        "request_id": "req_001",
+        "debug": "A field you might want to hide"
+      }
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I’ll look for a few spots with good coffee and room to settle in."
+        },
+        {
+          "type": "tool",
+          "name": "search_places",
+          "arguments": {
+            "neighborhood": "Brooklyn",
+            "amenities": [
+              "Wi-Fi",
+              "outlets"
+            ],
+            "open_now": true
+          }
+        }
+      ],
+      "timestamp": "2026-11-12T09:30:01Z",
+      "metadata": {
+        "duration_ms": 0,
+        "debug": "Tool dispatch"
+      }
+    },
+    {
+      "role": "tool",
+      "results": [
+        {
+          "name": "The Reading Room",
+          "rating": 4.8,
+          "seats_available": 12,
+          "tags": [
+            "quiet",
+            "bright"
+          ],
+          "details": {
+            "address": "123 Example Street",
+            "outdoor": false
+          }
+        },
+        {
+          "name": "Corner Coffee",
+          "rating": 4.6,
+          "tags": [
+            "cozy"
+          ],
+          "details": null
+        }
+      ],
+      "success": true,
+      "metadata": {
+        "debug": "Synthetic results"
+      }
+    },
+    {
+      "role": "assistant",
+      "content": "The Reading Room looks like a good fit. It has Wi-Fi, outlets, and a quiet atmosphere.\n\nCorner Coffee is another option if you prefer a cozier space.",
+      "confidence": 0.92
+    },
+    {
+      "role": "system",
+      "extra": {
+        "a.key.with.dots": "Special characters work, too.",
+        "brackets[here]": {
+          "*": "An actual asterisk key"
+        }
+      },
+      "mixed_values": [
+        "text",
+        42,
+        false,
+        null,
+        {
+          "nested": [
+            "another level",
+            []
+          ]
+        }
+      ],
+      "empty_list": [],
+      "empty_object": {}
+    }
+  ],
+  "summary": {
+    "total_events": 5,
+    "cost": 0,
+    "warnings": [],
+    "notes": null
+  }
+}
