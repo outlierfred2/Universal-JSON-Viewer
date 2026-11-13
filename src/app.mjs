@@ -1,7 +1,7 @@
 import { formatPath, parsePath, prefixMatches, newSelection, parseSelection, validateSelection, pathId, LIMITS } from './core.mjs';
 import { example } from './example.mjs';
 import { BUNDLED_SCHEMAS } from './schema-presets.mjs';
-import { SCHEMA_STORAGE_KEY, bundledSchemas, readSavedSchemas, saveSchema, deleteSchema, sameSelection } from './schemas.mjs';
+import { SCHEMA_STORAGE_KEY, bundledSchemas, readSavedSchemas, saveSchema, deleteSchema, sameSelection, rememberedSchemaId, rememberSchemaId } from './schemas.mjs';
 
 const $ = id => document.getElementById(id);
 const state = { worker: null, pending: null, request: 0, latestView: 0, selection: newSelection(), fields: [], fieldMap: new Map(), expanded: new Set(), fieldLimit: 160, view: 'readable', tree: null, rows: [], report: [], source: '', name: '', nodes: 0, visible: 0, loaded: false, fieldQuery: '', query: '', format: 'json', sourceLimit: 60000 };
@@ -60,6 +60,8 @@ function loadDocument(source, name = 'pasted.json', demo = false) {
   const worker = new Worker(new URL('./worker.mjs', import.meta.url), { type: 'module' });
   state.pending = worker;
   const id = ++state.request;
+  const schemaIdAtLoad = activeSchema()?.id || null;
+  const schemaSelectionAtLoad = schemaIdAtLoad ? validateSelection(state.selection) : null;
   worker.onmessage = ({ data }) => {
     if (data.type === 'loaded') {
       if (state.pending !== worker) return;
@@ -67,6 +69,12 @@ function loadDocument(source, name = 'pasted.json', demo = false) {
       Object.assign(state, { source, name: data.format === 'jsonl' && name === 'pasted.json' ? 'pasted.jsonl' : name, fields: data.fields, nodes: data.nodes, loaded: true, format: data.format, query: '', fieldQuery: '', fieldLimit: 160, sourceLimit: 60000 });
       state.fieldMap = new Map(data.fields.map(field => [field.id, field]));
       state.expanded = new Set(data.fields.filter(field => field.path.length < 2).map(field => field.id));
+      if (data.schemaMatches === false && activeSchema()?.id === schemaIdAtLoad && schemaSelectionAtLoad && sameSelection(state.selection, schemaSelectionAtLoad)) {
+        schemaState.activeId = null; state.selection = newSelection();
+        rememberSchemaId(schemaStorage(), null);
+        notify('Schema cleared: no matching fields or collection.');
+      }
+      if (activeSchema()) revealSelectionPaths();
       if (demo && !schemaState.activeId && state.selection.include.length === 0 && state.selection.exclude.length === 0) state.selection.collection = '$.events';
       $('content-search').value = ''; $('field-search').value = '';
       $('document-title').textContent = state.name;
@@ -87,7 +95,7 @@ function loadDocument(source, name = 'pasted.json', demo = false) {
     }
   };
   worker.onerror = event => { if (worker === state.pending || worker === state.worker) showError(`Could not start the JSON reader. Serve this app over HTTP or HTTPS. ${event.message || ''}`); };
-  worker.postMessage({ type: 'load', id, text: source });
+  worker.postMessage({ type: 'load', id, text: source, schemaSelection: schemaSelectionAtLoad });
 }
 
 async function readFile(file) {
@@ -129,20 +137,26 @@ function renderSchemas() {
     picker.append(group);
   }
   picker.value = active?.id || '';
+  picker.classList.toggle('schema-active', Boolean(active));
   $('schema-edit').disabled = !active || Boolean(active.bundled);
 }
 
 function applyFieldSelection(selection, schemaId = null) {
   state.selection = validateSelection(selection);
   schemaState.activeId = schemaId;
+  rememberSchemaId(schemaStorage(), schemaId);
   state.query = ''; state.fieldQuery = ''; state.fieldLimit = 160;
   $('content-search').value = ''; $('field-search').value = '';
+  revealSelectionPaths();
+  updateCollections(); renderFields(); requestView();
+}
+
+function revealSelectionPaths() {
   // Reveal the saved fields in the picker, including paths nested under arrays.
   for (const path of [...state.selection.include, ...state.selection.exclude]) {
     const segments = parsePath(path).map(segment => typeof segment === 'number' ? null : segment);
     for (let length = 0; length < segments.length; length++) state.expanded.add(pathId(segments.slice(0, length)));
   }
-  updateCollections(); renderFields(); requestView();
 }
 
 function openSchemaDialog(editing = false) {
@@ -256,13 +270,16 @@ function pathCopy(path) {
 
 function renderNode(node, path = [], key = 'Document', depth = 0) {
   if (!node.children) {
-    const row = el('div', 'node node-value');
-    const heading = el('div', 'value-heading');
+    const row = el('details', 'node node-group node-value');
+    const heading = el('summary');
     heading.append(el('span', 'node-title', String(key)), el('span', 'type-chip', node.type), pathCopy(path));
     const value = node.type === 'string' && node.value === '' ? '""' : String(node.value);
     const content = el('div', `value-text ${node.type}`, value.length > 5000 ? value.slice(0, 5000) + '…' : value);
-    row.append(heading, content);
-    if (value.length > 5000) row.append(button(`Show full value (${number(value.length)} characters)`, 'load-more', event => { content.textContent = value; event.currentTarget.remove(); }));
+    const body = el('div', 'node-value-body');
+    body.append(content);
+    row.append(heading, body);
+    row.open = true;
+    if (value.length > 5000) body.append(button(`Show full value (${number(value.length)} characters)`, 'load-more', event => { content.textContent = value; event.currentTarget.remove(); }));
     return row;
   }
   const group = el('details', 'node node-group');
@@ -387,6 +404,7 @@ function setView(view) {
 
 function resetSelection() {
   schemaState.activeId = null;
+  rememberSchemaId(schemaStorage(), null);
   state.selection = newSelection(); $('rules-panel').hidden = true; $('rules-toggle').setAttribute('aria-expanded', 'false');
   updateCollections(); renderFields(); requestView(); notify('Selection reset');
 }
@@ -402,7 +420,7 @@ function importSelection(text) {
 $('schema-select').addEventListener('change', event => {
   const schema = [...schemaState.bundled, ...schemaState.saved].find(item => item.id === event.target.value);
   if (schema) { applyFieldSelection(schema.selection, schema.id); notify('Schema applied'); }
-  else { schemaState.activeId = null; renderSchemas(); }
+  else { schemaState.activeId = null; rememberSchemaId(schemaStorage(), null); renderSchemas(); }
 });
 $('schema-save').addEventListener('click', () => openSchemaDialog());
 $('schema-edit').addEventListener('click', () => openSchemaDialog(true));
@@ -411,6 +429,7 @@ $('schema-form').addEventListener('submit', event => {
   try {
     const schema = saveSchema(schemaStorage(), { id: schemaState.editingId, name: $('schema-name').value, selection: state.selection });
     refreshSavedSchemas(); schemaState.activeId = schema.id; renderSchemas();
+    rememberSchemaId(schemaStorage(), schema.id);
     $('schema-dialog').close(); notify(schemaState.editingId ? 'Schema updated' : 'Schema saved');
   } catch (error) { schemaError(error); }
 });
@@ -418,6 +437,7 @@ $('schema-delete').addEventListener('click', () => {
   try {
     deleteSchema(schemaStorage(), schemaState.editingId);
     refreshSavedSchemas(); schemaState.activeId = null; renderSchemas();
+    rememberSchemaId(schemaStorage(), null);
     $('schema-dialog').close(); notify('Schema deleted');
   } catch (error) { schemaError(error); }
 });
@@ -446,7 +466,7 @@ $('clear-document').addEventListener('click', () => {
   Object.assign(state, { worker: null, pending: null, loaded: false, source: '', fields: [], fieldMap: new Map(), tree: null, rows: [], name: '', selection: newSelection() });
   $('workspace').hidden = true; $('welcome').hidden = false; $('initial-json').value = ''; busy(null);
   $('header-document').hidden = true; $('header-document-actions').hidden = true;
-  schemaState.activeId = null; renderSchemas();
+  state.selection = activeSchema() ? validateSelection(activeSchema().selection) : newSelection(); renderSchemas();
 });
 $('document-menu').addEventListener('click', () => { const open = $('more-menu').hidden; $('more-menu').hidden = !open; $('document-menu').setAttribute('aria-expanded', String(open)); });
 document.addEventListener('click', event => { if (!event.target.closest('.document-actions') || event.target.closest('#more-menu button')) { $('more-menu').hidden = true; $('document-menu').setAttribute('aria-expanded', 'false'); } });
@@ -486,6 +506,9 @@ window.addEventListener('storage', event => {
   try { refreshSavedSchemas(); renderSchemas(); } catch (error) { notify(error.message, true); }
 });
 try { refreshSavedSchemas(); } catch (error) { notify(error.message, true); }
+schemaState.activeId = rememberedSchemaId(schemaStorage());
+if (activeSchema()) state.selection = validateSelection(activeSchema().selection);
+else { schemaState.activeId = null; rememberSchemaId(schemaStorage(), null); }
 renderSchemas();
 
 // Session-only panel sizing; removing the override restores the responsive default.

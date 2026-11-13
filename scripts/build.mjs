@@ -10,10 +10,10 @@ for (const name of ['index.html', 'styles.css', 'src', 'favicon.svg', '.nojekyll
 const read = name => readFile(new URL(name, root), 'utf8');
 const [html, css, core, app, example, worker, favicon, schemas, presets] = await Promise.all(['index.html', 'styles.css', 'src/core.mjs', 'src/app.mjs', 'src/example.mjs', 'src/worker.mjs', 'favicon.svg', 'src/schemas.mjs', 'src/schema-presets.mjs'].map(read));
 const stripExports = source => source.replace(/^export /gm, '');
-const workerSource = stripExports(core) + '\n' + worker.replace(/^import .*;\n/, '');
+const schemaSource = stripExports(schemas).replace(/^import .*;\n/gm, '');
+const workerSource = stripExports(core) + '\n' + schemaSource + '\n' + worker.replace(/^import .*;\n/gm, '');
 const workerExpression = `new Worker(URL.createObjectURL(new Blob([${JSON.stringify(workerSource)}], { type: 'text/javascript' })))`;
 const appSource = app.replace(/^import .*;\n/gm, '').replace("new Worker(new URL('./worker.mjs', import.meta.url), { type: 'module' })", () => workerExpression);
-const schemaSource = stripExports(schemas).replace(/^import .*;\n/gm, '');
 const script = (stripExports(core) + '\n' + stripExports(example) + '\n' + stripExports(presets) + '\n' + schemaSource + '\n' + appSource).replace(/<\/script/gi, '<\\/script');
 const icon = 'data:image/svg+xml,' + encodeURIComponent(favicon);
 const standalone = html.replace('<link rel="stylesheet" href="./styles.css">', () => `<style>${css}</style>`)

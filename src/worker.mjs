@@ -1,4 +1,5 @@
 import { LIMITS, discover, project, searchTree, selectionReport, nodeCount, collectRows, parseDocument } from './core.mjs';
+import { schemaFits } from './schemas.mjs';
 let document, index, currentTree;
 self.onmessage = ({ data }) => {
   try {
@@ -7,7 +8,7 @@ self.onmessage = ({ data }) => {
       const parsed = parseDocument(data.text);
       const found = discover(parsed.document);
       document = parsed.document; index = found;
-      self.postMessage({ type: 'loaded', id: data.id, format: parsed.format, ...index });
+      self.postMessage({ type: 'loaded', id: data.id, format: parsed.format, schemaMatches: data.schemaSelection ? schemaFits(document, data.schemaSelection) : null, ...index });
     } else if (data.type === 'view') {
       currentTree = project(document, data.selection);
       const count = nodeCount(currentTree);

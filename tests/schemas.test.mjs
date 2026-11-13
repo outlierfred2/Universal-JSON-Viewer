@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SCHEMA_STORAGE_KEY, readSavedSchemas, saveSchema, deleteSchema, sameSelection, bundledSchemas } from '../src/schemas.mjs';
+import { SCHEMA_STORAGE_KEY, readSavedSchemas, saveSchema, deleteSchema, sameSelection, bundledSchemas, rememberedSchemaId, rememberSchemaId, schemaFits } from '../src/schemas.mjs';
 import { newSelection, project, toJSONValue, discover, selectionReport } from '../src/core.mjs';
 import { BUNDLED_SCHEMAS } from '../src/schema-presets.mjs';
 
@@ -121,4 +121,38 @@ test('bundled presets use a separate namespace and share the exact selection for
   assert.equal(presets[0].id, 'bundled:conversation');
   assert.equal(presets[0].bundled, true);
   assert.equal(sameSelection(presets[0].selection, focus()), true);
+});
+
+test('last schema persists independently of the library and can be cleared', () => {
+  const disk = storage(); disk.removeItem = key => disk.values.delete(key);
+  for (const id of ['saved:example', 'bundled:terminal-bench-pdf-metadata']) {
+    assert.equal(rememberSchemaId(disk, id), true);
+    assert.equal(rememberedSchemaId(disk), id);
+  }
+  assert.deepEqual(readSavedSchemas(disk), []);
+  assert.equal(rememberSchemaId(disk, null), true);
+  assert.equal(rememberedSchemaId(disk), null);
+  assert.equal(rememberSchemaId(null, 'saved:example'), false);
+  assert.equal(rememberedSchemaId(null), null);
+});
+
+test('schema fit accepts partial optional fields and literal false, zero and null', () => {
+  const selection = { ...newSelection(), mode: 'selected', include: ['$.a', '$.optional'] };
+  for (const value of [false, 0, null, '', [], {}]) assert.equal(schemaFits({ a: value }, selection), true);
+  assert.equal(schemaFits({ unrelated: 1 }, selection), false);
+});
+
+test('schema fit respects wildcard nesting, special keys and exact array indexes', () => {
+  const selection = { ...newSelection(), mode: 'selected', include: ['$.rows[*]["a.b"]'] };
+  assert.equal(schemaFits({ rows: [{ other: 1 }, { 'a.b': false }] }, selection), true);
+  assert.equal(schemaFits({ rows: [{ a: { b: 1 } }] }, selection), false);
+  assert.equal(schemaFits({ rows: [{ 'a.b': 1 }] }, { ...selection, include: ['$.rows[1]["a.b"]'] }), false);
+});
+
+test('schema fit requires a valid collection and handles exclude-only schemas', () => {
+  assert.equal(schemaFits({ events: [] }, { ...newSelection(), collection: '$.events' }), true);
+  assert.equal(schemaFits({ events: 'text' }, { ...newSelection(), collection: '$.events' }), false);
+  assert.equal(schemaFits({ debug: false }, { ...newSelection(), exclude: ['$.debug'] }), true);
+  assert.equal(schemaFits({ unrelated: 1 }, { ...newSelection(), exclude: ['$.debug'] }), false);
+  assert.equal(schemaFits({ unrelated: 1 }, newSelection()), true);
 });

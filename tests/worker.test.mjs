@@ -4,6 +4,17 @@ import { Worker } from 'node:worker_threads';
 import { once } from 'node:events';
 import { newSelection, toJSONValue } from '../src/core.mjs';
 
+test('worker reports compatibility for a remembered schema when a new document loads', async t => {
+  const send = await start(t);
+  const schemaSelection = { ...newSelection(), mode: 'selected', include: ['$.required'] };
+  const matched = await send({ type: 'load', id: 1, text: '{"required":false}', schemaSelection });
+  assert.equal(matched.schemaMatches, true);
+  const unrelated = await send({ type: 'load', id: 2, text: '{"different":0}', schemaSelection });
+  assert.equal(unrelated.schemaMatches, false);
+  const ordinary = await send({ type: 'load', id: 3, text: 'null' });
+  assert.equal(ordinary.schemaMatches, null);
+});
+
 async function start(t) {
   const worker = new Worker(new URL('./fixtures/worker-host.mjs', import.meta.url));
   t.after(() => worker.terminate());

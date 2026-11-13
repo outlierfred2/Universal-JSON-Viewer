@@ -26,7 +26,7 @@ Open `dist/standalone.html` directly in a browser. This is the same app with inl
 - The field picker scans the entire document and combines paths across array items. Expand branches or search field paths, types, and example values.
 - Use **+** to include a field and its descendants or **−** to hide a branch. Click an active button again to remove its rule; clicking the other button switches the rule. Child rules remain saved when a parent changes. An excluded ancestor takes priority over every inclusion beneath it.
 - **Show all except hidden** starts with every value visible. **Show only selected fields** starts empty and retains the ancestors needed to reach included fields. Missing paths do not prevent loading.
-- **Readable** renders values recursively and preserves source array indexes and order. Groups and record lists load children in batches. Strings retain line breaks; long strings can be expanded.
+- **Readable** gives every field its own independently collapsible tile, including text, numbers, booleans, nulls, objects, and arrays at every nesting level. Click a tile's header to fold or expand it. Source array indexes and order are preserved. Groups and record lists load children in batches. Strings retain line breaks; long strings can be expanded.
 - **Table** combines direct child fields across all visible records. Structured cells open a recursive inspector. Missing fields use an em dash; literal null, false, zero, and empty strings remain distinct. Additional rows and columns are available through “Show more” controls.
 - **Collection** chooses an array as the record list. Wildcards can gather matching arrays across nested sessions. Choose **Whole document** to return to surrounding metadata.
 - Drag the divider between Fields and the viewer to resize the sidebar. Double-click it to restore the original width. The focused divider also supports arrow keys, Home/End, and Enter to reset. Width changes last for the current page session; narrow screens keep the stacked layout.
@@ -40,6 +40,8 @@ Input, original values, and the active view are held in memory for the current t
 The **Saved schema** selector is in the Fields sidebar. Choose fields, mode, and collection, then click **Save**, enter a name, and save the schema. On a later document, selecting its name immediately restores those settings without pasting JSON. Matching field branches expand in the picker. Missing fields use the existing match report.
 
 The selector lists local schemas alphabetically first, followed by alphabetized built-in schemas.
+
+The last selected schema is remembered in the browser and restored after refresh. An active schema is highlighted in purple. When a new document is opened or pasted, the app clears the selection and remembered choice if none of the schema's included paths exist, or its selected collection is missing or is not an array. Partial matches are allowed for optional fields. For exclude-only schemas, at least one excluded path must exist; an all-fields schema without rules fits any document. Reset or choosing Custom selection clears the remembered choice. This checks field paths, not full JSON Schema type validation.
 
 Changing the fields, visibility mode, or collection marks the chosen schema **(modified)**. Changes do not overwrite the saved version. **Edit** updates its rules and name, or deletes it; **Save** creates a separate named schema. Names must be unique. Deleting a schema leaves the current view intact as a custom selection. **Reset** resets the active selection and retains the schema library.
 

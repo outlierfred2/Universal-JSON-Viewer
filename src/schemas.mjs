@@ -1,6 +1,41 @@
-import { validateSelection } from './core.mjs';
+import { validateSelection, parsePath } from './core.mjs';
 
 export const SCHEMA_STORAGE_KEY = 'universal-json-viewer.schemas.v1';
+export const LAST_SCHEMA_STORAGE_KEY = 'universal-json-viewer.last-schema.v1';
+
+export function rememberedSchemaId(storage) {
+  try { return storage?.getItem(LAST_SCHEMA_STORAGE_KEY) || null; } catch { return null; }
+}
+
+export function rememberSchemaId(storage, id) {
+  try {
+    if (!storage) return false;
+    if (id) storage.setItem(LAST_SCHEMA_STORAGE_KEY, id);
+    else storage.removeItem(LAST_SCHEMA_STORAGE_KEY);
+    return true;
+  } catch { return false; }
+}
+
+export function schemaFits(document, input) {
+  const selection = validateSelection(input);
+  function exists(path, arrayOnly = false) {
+    const segments = parsePath(path), stack = [[document, 0]];
+    while (stack.length) {
+      const [value, offset] = stack.pop();
+      if (offset === segments.length) { if (!arrayOnly || Array.isArray(value)) return true; continue; }
+      const key = segments[offset];
+      if (key === null) {
+        if (Array.isArray(value)) for (const child of value) stack.push([child, offset + 1]);
+      } else if (value !== null && typeof value === 'object' && Array.isArray(value) === (typeof key === 'number') && Object.hasOwn(value, key)) stack.push([value[key], offset + 1]);
+    }
+    return false;
+  }
+  if (selection.collection !== null && !exists(selection.collection, true)) return false;
+  // Optional fields may be absent; a schema fits when at least one inclusion exists.
+  if (selection.include.length) return selection.include.some(path => exists(path));
+  if (selection.mode === 'selected') return false;
+  return !selection.exclude.length || selection.exclude.some(path => exists(path));
+}
 const SCHEMA_CAPACITY = 100;
 const SCHEMA_BYTES = 2 * 1024 * 1024;
 
