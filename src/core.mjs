@@ -67,6 +67,12 @@ export function validateSelection(input) {
     if (!Array.isArray(input[key]) || input[key].length > LIMITS.rules) throw new Error(`${key} must be an array with at most ${LIMITS.rules} paths.`);
     lists[key] = [...new Set(input[key].map(path => formatPath(parsePath(path))))];
   }
+  // Own-value rules preserve mixed scalar/structured values when a parent is split.
+  for (const key of ['includeSelf', 'excludeSelf']) {
+    if (input[key] === undefined) continue;
+    if (!Array.isArray(input[key]) || input[key].length > LIMITS.rules) throw new Error(`${key} must be an array with at most ${LIMITS.rules} paths.`);
+    if (input[key].length) lists[key] = [...new Set(input[key].map(path => formatPath(parsePath(path))))];
+  }
   const collection = input.collection == null ? null : formatPath(parsePath(input.collection));
   return { version: 1, mode: input.mode, ...lists, collection };
 }
@@ -80,7 +86,45 @@ export function parseSelection(text) {
 
 export function compileSelection(selection) {
   const clean = validateSelection(selection);
-  return { ...clean, includePaths: clean.include.map(parsePath), excludePaths: clean.exclude.map(parsePath) };
+  return { ...clean, includePaths: clean.include.map(parsePath), excludePaths: clean.exclude.map(parsePath), includeSelfPaths: (clean.includeSelf || []).map(parsePath), excludeSelfPaths: (clean.excludeSelf || []).map(parsePath) };
+}
+
+export function fieldSelections(fields, selection) {
+  const includes = selection.include.map(parsePath), excludes = selection.exclude.map(parsePath);
+  return new Map(fields.map(field => [field.id, excludes.some(rule => prefixMatches(rule, field.path)) ? 'hide' : includes.some(rule => prefixMatches(rule, field.path)) ? 'show' : null]));
+}
+
+export function toggleFieldSelection(fields, selection, field, action) {
+  const next = validateSelection(selection);
+  const current = fieldSelections(fields, next).get(field.id);
+  const byId = new Map(fields.map(item => [item.id, item]));
+  const underTarget = path => prefixMatches(field.path, parsePath(path));
+  for (const list of ['include', 'exclude']) {
+    const own = list + 'Self';
+    const result = new Set(), self = new Set((next[own] || []).filter(path => !underTarget(path)));
+    function split(parent) {
+      // Keep this node's scalar/empty occurrences without selecting its descendants.
+      self.add(parent.label);
+      for (const id of parent.children) {
+        const child = byId.get(id);
+        if (child.id === field.id) continue;
+        if (prefixMatches(child.path, field.path)) split(child);
+        else result.add(child.label);
+      }
+    }
+    for (const rule of next[list]) {
+      const path = parsePath(rule);
+      if (underTarget(rule)) continue;
+      if (path.length < field.path.length && prefixMatches(path, field.path)) {
+        const parent = byId.get(pathId(path));
+        if (parent) split(parent); else result.add(rule);
+      } else result.add(rule);
+    }
+    if (current !== action && list === (action === 'show' ? 'include' : 'exclude')) result.add(field.label);
+    next[list] = [...result];
+    if (self.size) next[own] = [...self]; else delete next[own];
+  }
+  return validateSelection(next);
 }
 
 export function discover(document) {
@@ -115,20 +159,24 @@ export function discover(document) {
 // The projected tree retains source keys/indexes. Excluding array elements never renumbers paths.
 export function project(document, selection) {
   const compiled = compileSelection(selection);
+  const reachablePaths = [...compiled.includePaths, ...compiled.includeSelfPaths];
   function visit(value, path, inherited) {
     if (compiled.excludePaths.some(rule => prefixMatches(rule, path))) return null;
     const selected = compiled.mode === 'all' || inherited || compiled.includePaths.some(rule => prefixMatches(rule, path));
-    const reachable = selected || compiled.includePaths.some(rule => path.length <= rule.length && prefixMatches(rule.slice(0, path.length), path));
+    const selfMatches = rule => rule.length === path.length && prefixMatches(rule, path);
+    const ownSelected = selected || compiled.includeSelfPaths.some(selfMatches);
+    const ownHidden = compiled.excludeSelfPaths.some(selfMatches);
+    const reachable = ownSelected || reachablePaths.some(rule => path.length <= rule.length && prefixMatches(rule.slice(0, path.length), path));
     if (!reachable) return null;
     const type = kind(value);
-    if (type !== 'array' && type !== 'object') return selected ? { type, value } : null;
+    if (type !== 'array' && type !== 'object') return ownSelected && !ownHidden ? { type, value } : null;
     const entries = type === 'array' ? value.map((child, index) => [index, child]) : Object.entries(value);
     const children = [];
     for (const [key, child] of entries) {
       const node = visit(child, [...path, key], selected);
       if (node) children.push({ key, node });
     }
-    if (!selected && children.length === 0) return null;
+    if (children.length === 0 && (ownHidden || !(selected || ownSelected && entries.length === 0))) return null;
     return { type, children, total: entries.length };
   }
   return visit(document, [], false);
@@ -148,7 +196,7 @@ export function searchTree(tree, query) {
 
 export function selectionReport(fields, selection, document) {
   const clean = validateSelection(selection);
-  return [...clean.include.map(path => ({ action: 'Show', path })), ...clean.exclude.map(path => ({ action: 'Hide', path }))].map(rule => {
+  return ['include', 'exclude', 'includeSelf', 'excludeSelf'].flatMap(list => (clean[list] || []).map(path => ({ action: list.startsWith('include') ? 'Show' : 'Hide', list, own: list.endsWith('Self'), path }))).map(rule => {
     const path = parsePath(rule.path);
     let count;
     if (path.some(segment => typeof segment === 'number') && arguments.length >= 3) {

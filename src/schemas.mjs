@@ -18,11 +18,15 @@ export function rememberSchemaId(storage, id) {
 
 export function schemaFits(document, input) {
   const selection = validateSelection(input);
-  function exists(path, arrayOnly = false) {
+  function exists(path, arrayOnly = false, selfOnly = false) {
     const segments = parsePath(path), stack = [[document, 0]];
     while (stack.length) {
       const [value, offset] = stack.pop();
-      if (offset === segments.length) { if (!arrayOnly || Array.isArray(value)) return true; continue; }
+      if (offset === segments.length) {
+        const ownValue = value === null || typeof value !== 'object' || Object.keys(value).length === 0;
+        if ((!arrayOnly || Array.isArray(value)) && (!selfOnly || ownValue)) return true;
+        continue;
+      }
       const key = segments[offset];
       if (key === null) {
         if (Array.isArray(value)) for (const child of value) stack.push([child, offset + 1]);
@@ -32,9 +36,9 @@ export function schemaFits(document, input) {
   }
   if (selection.collection !== null && !exists(selection.collection, true)) return false;
   // Optional fields may be absent; a schema fits when at least one inclusion exists.
-  if (selection.include.length) return selection.include.some(path => exists(path));
+  if (selection.include.length || selection.includeSelf?.length) return selection.include.some(path => exists(path)) || (selection.includeSelf || []).some(path => exists(path, false, true));
   if (selection.mode === 'selected') return false;
-  return !selection.exclude.length || selection.exclude.some(path => exists(path));
+  return !(selection.exclude.length || selection.excludeSelf?.length) || selection.exclude.some(path => exists(path)) || (selection.excludeSelf || []).some(path => exists(path, false, true));
 }
 const SCHEMA_CAPACITY = 100;
 const SCHEMA_BYTES = 2 * 1024 * 1024;
@@ -108,7 +112,7 @@ export function deleteSchema(storage, id) {
 export function sameSelection(left, right) {
   const canonical = value => {
     const selection = validateSelection(value);
-    return JSON.stringify({ ...selection, include: [...selection.include].sort(), exclude: [...selection.exclude].sort() });
+    return JSON.stringify({ version: selection.version, mode: selection.mode, collection: selection.collection, include: [...selection.include].sort(), exclude: [...selection.exclude].sort(), includeSelf: [...(selection.includeSelf || [])].sort(), excludeSelf: [...(selection.excludeSelf || [])].sort() });
   };
   return canonical(left) === canonical(right);
 }

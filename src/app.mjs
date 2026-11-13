@@ -1,4 +1,4 @@
-import { formatPath, parsePath, prefixMatches, newSelection, parseSelection, validateSelection, pathId, LIMITS } from './core.mjs';
+import { formatPath, parsePath, prefixMatches, newSelection, parseSelection, validateSelection, pathId, fieldSelections, toggleFieldSelection, LIMITS } from './core.mjs';
 import { example } from './example.mjs';
 import { BUNDLED_SCHEMAS } from './schema-presets.mjs';
 import { SCHEMA_STORAGE_KEY, bundledSchemas, readSavedSchemas, saveSchema, deleteSchema, sameSelection, rememberedSchemaId, rememberSchemaId } from './schemas.mjs';
@@ -182,12 +182,8 @@ function updateCollections() {
 }
 
 function fieldRule(field, action) {
-  const path = field.label;
-  const active = (action === 'show' ? state.selection.include : state.selection.exclude).includes(path);
-  state.selection.include = state.selection.include.filter(rule => rule !== path);
-  state.selection.exclude = state.selection.exclude.filter(rule => rule !== path);
-  if (!active && action === 'show') state.selection.include.push(path);
-  if (!active && action === 'hide') state.selection.exclude.push(path);
+  try { state.selection = toggleFieldSelection(state.fields, state.selection, field, action); }
+  catch (error) { notify(error.message, true); return; }
   renderFields(); requestView();
 }
 
@@ -196,7 +192,9 @@ function renderFields() {
   const fragment = document.createDocumentFragment();
   $('selection-mode').value = state.selection.mode;
   $('field-count').textContent = number(state.fields.length);
-  const include = new Set(state.selection.include), exclude = new Set(state.selection.exclude);
+  const actionsByField = fieldSelections(state.fields, state.selection);
+  const include = new Set(state.fields.filter(field => actionsByField.get(field.id) === 'show').map(field => field.label));
+  const exclude = new Set(state.fields.filter(field => actionsByField.get(field.id) === 'hide').map(field => field.label));
   const excludePaths = state.selection.exclude.map(parsePath);
   const query = state.fieldQuery.trim().toLocaleLowerCase();
   let displayed = 0, eligible = 0;
@@ -257,8 +255,8 @@ function renderStatus() {
   if (!state.report.length) panel.append(el('p', 'rule-empty', 'No selection rules'));
   for (const rule of state.report) {
     const row = el('div', `rule-item${rule.count ? '' : ' missing'}`);
-    row.append(el('span', 'rule-action', rule.action), el('code', '', rule.path), el('span', '', rule.count ? `${number(rule.count)} matches` : 'Missing'));
-    const remove = button('×', 'icon-button', () => { const list = rule.action === 'Show' ? 'include' : 'exclude'; state.selection[list] = state.selection[list].filter(path => path !== rule.path); renderFields(); requestView(); });
+    row.append(el('span', 'rule-action', rule.action + (rule.own ? ' value' : '')), el('code', '', rule.path), el('span', '', rule.count ? `${number(rule.count)} matches` : 'Missing'));
+    const remove = button('×', 'icon-button', () => { const list = rule.list; state.selection[list] = state.selection[list].filter(path => path !== rule.path); renderFields(); requestView(); });
     remove.setAttribute('aria-label', `Remove ${rule.action.toLowerCase()} rule ${rule.path}`); row.append(remove); panel.append(row);
   }
 }

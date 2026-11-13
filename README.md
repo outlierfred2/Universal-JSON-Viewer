@@ -24,7 +24,7 @@ Open `dist/standalone.html` directly in a browser. This is the same app with inl
 
 - Open a `.json` or `.jsonl` file, drop one onto the page, or paste a JSON value. The example is synthetic and includes changing types, mixed arrays, nested objects, special-character keys, nulls, zero, false, and empty containers.
 - The field picker scans the entire document and combines paths across array items. Expand branches or search field paths, types, and example values.
-- Use **+** to include a field and its descendants or **−** to hide a branch. Click an active button again to remove its rule; clicking the other button switches the rule. Child rules remain saved when a parent changes. An excluded ancestor takes priority over every inclusion beneath it.
+- Use **+** to include a field and all its descendants or **−** to hide the entire branch. All descendants display the same active button. Click an active button again to clear it; clicking the other button switches it. Changing a child clears the ancestor selections and preserves the other branches' selections. Selecting a parent again applies its choice to the entire branch, replacing child exceptions.
 - **Show all except hidden** starts with every value visible. **Show only selected fields** starts empty and retains the ancestors needed to reach included fields. Missing paths do not prevent loading.
 - **Readable** gives every field its own independently collapsible tile, including text, numbers, booleans, nulls, objects, and arrays at every nesting level. Click a tile's header to fold or expand it. Source array indexes and order are preserved. Groups and record lists load children in batches. Strings retain line breaks; long strings can be expanded.
 - **Table** combines direct child fields across all visible records. Structured cells open a recursive inspector. Missing fields use an em dash; literal null, false, zero, and empty strings remain distinct. Additional rows and columns are available through “Show more” controls.
@@ -96,6 +96,8 @@ The copied configuration contains paths and options, never document values:
 `collection` is optional. The Fields sidebar also supports **Download selection** and **Import file**. If clipboard writing is unavailable, a dialog provides selectable text for manual copying. Pasting uses an ordinary textarea and does not request clipboard-read permission.
 
 Paths support root `$`, dot keys, JSON-quoted bracket keys (`$["a.b"]`), array indexes (`$[0]`), and array wildcards (`$[*]`). They are a deliberately limited path syntax, not a full JSONPath query engine. Object keys and array indexes are typed separately; an object key `"*"` is not a wildcard. No path expressions or code are evaluated. Field-picker selections use wildcards; copied individual value paths use concrete source indexes.
+
+When a parent selection is split by a child edit, copied/saved selections can also contain `includeSelf` and `excludeSelf`. These optional path lists preserve a node's own scalar or empty-container occurrences without selecting its children. Keep these lists when transferring a selection; this matters when the same path is text in one record and structured data in another. Existing version-1 selections remain supported.
 
 Renamed or relocated fields need updated rules. A path that exists but is excluded by an ancestor is still reported as matched; the picker labels it “hidden by parent.” Empty selected collections are shown explicitly. **Reset** clears includes, excludes, and collection selection.
 
