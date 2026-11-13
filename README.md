@@ -45,7 +45,35 @@ Changing the fields, visibility mode, or collection marks the chosen schema **(m
 
 User-created schemas are saved for the current browser and site address, with no backend. They do not automatically move between devices or browsers; use the existing clipboard/file controls to transfer a selection, then save it under a name at the destination. Storage errors are shown explicitly. Keep exports for backup. The library supports 100 schemas and 2 MB of saved settings.
 
-Shared presets can be added to `src/schema-presets.mjs` and shipped with the GitHub deployment. The registry is empty until real field paths are supplied. Entries have `{ id, name, selection }`; `selection` uses the exact copy/paste format below. Bundled presets appear in a separate group and remain unchanged by user edits. Users can save a customized copy.
+Shared presets can be added to `src/schema-presets.mjs` and shipped with the GitHub deployment. The registry includes **Terminal Bench PDF Metadata** with its supplied inclusion and exclusion rules. Entries have `{ id, name, selection }`; `selection` uses the exact copy/paste format below. Bundled presets appear in a separate group and remain unchanged by user edits. Users can save a customized copy.
+
+## Add another built-in schema
+
+**Alphabetizing is automatic.** Add new entries at the end of the list in any order. The dropdown sorts names alphabetically, ignoring capitalization, with local schemas first and built-in schemas second. You do not need to rearrange existing entries or sort the field paths.
+
+1. Open a representative JSON document in the app, choose the fields, mode, and collection you want, then click **Copy selection**. If someone has already supplied a selection JSON, use that instead.
+2. Open `src/schema-presets.mjs`.
+3. Add another object inside `BUNDLED_SCHEMAS`, immediately before the final `];`. Use this pattern:
+
+   ```js
+   {
+     id: 'another-schema',
+     name: 'Another Schema',
+     selection: {
+       "version": 1,
+       "mode": "selected",
+       "include": ["$.example_field"],
+       "exclude": [],
+       "collection": null
+     },
+   },
+   ```
+
+4. Give it a **unique `id`** using lowercase words and hyphens, and a **unique `name`** matching the label you want in the dropdown. Replace the entire example object after `selection:` with the copied selection JSON. Keep `version`, `mode`, `include`, `exclude`, and `collection` as supplied. Keep a comma after each schema entry so another can be appended later. When editing an existing schema, keep its `id` stable.
+5. Run `npm test` and `npm run build`. The tests validate every built-in schema and check the generated app.
+6. Open the updated app, load a document, and choose the new name under **Built-in**. Verify the expected fields are shown. Publish the changes through the normal GitHub Pages deployment to make the schema available to everyone.
+
+The app's **Save** button creates a local browser schema. To include a schema for every user, add it to `src/schema-presets.mjs` using the steps above. No additional dropdown or sorting code needs to change.
 
 ## Copy and paste a field selection
 
