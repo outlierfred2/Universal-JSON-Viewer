@@ -34,4 +34,18 @@ export const BUNDLED_SCHEMAS = [
       collection: null,
     },
   },
+  {
+    id: 'macrofauna_quill-rubric-viewer',
+    name: 'Macrofauna_Quill Rubric.json',
+    selection: {
+      "version": 1,
+      "mode": "selected",
+      "include": [
+        "$[*].criteria",
+        "$[*].weight"
+      ],
+      "exclude": [],
+      "collection": null
+    }
+  },
 ];
