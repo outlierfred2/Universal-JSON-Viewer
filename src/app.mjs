@@ -266,6 +266,10 @@ function pathCopy(path) {
   control.setAttribute('aria-label', `Copy path ${formatPath(path)}`); control.title = formatPath(path); return control;
 }
 
+function arrayItemLabel(index) {
+  return `[${index}] Item #${index + 1}`;
+}
+
 function renderNode(node, path = [], key = 'Document', depth = 0) {
   if (!node.children) {
     const row = el('details', 'node node-group node-value');
@@ -296,7 +300,7 @@ function renderNode(node, path = [], key = 'Document', depth = 0) {
       const end = Math.min(offset + 60, count);
       for (; offset < end; offset++) {
         const child = node.children[offset];
-        children.append(renderNode(child.node, [...path, child.key], node.type === 'array' ? `[${child.key}]` : child.key, depth + 1));
+        children.append(renderNode(child.node, [...path, child.key], node.type === 'array' ? arrayItemLabel(child.key) : child.key, depth + 1));
       }
       if (offset < count) children.append(button(`Show next ${Math.min(60, count - offset)} (${number(count - offset)} remaining)`, 'load-more', event => { event.currentTarget.remove(); appendBatch(); }));
     }
@@ -334,7 +338,7 @@ function renderTable() {
     for (const key of keys.slice(0, columnCount)) heading.append(el('th', '', key === null ? 'Value' : key === '' ? '""' : key));
     head.replaceChildren(heading); body.replaceChildren();
     for (const row of rows.slice(0, rowCount)) {
-      const tr = el('tr'); tr.append(el('td', 'index-cell', row.path.length ? `[${row.path.at(-1)}]` : '1'));
+      const tr = el('tr'); tr.append(el('td', 'index-cell', row.path.length ? arrayItemLabel(row.path.at(-1)) : '1'));
       const cells = row.node.type === 'object' ? new Map(row.node.children.map(child => [child.key, child.node])) : new Map([[null, row.node]]);
       for (const key of keys.slice(0, columnCount)) {
         const td = el('td'), node = cells.get(key);
@@ -385,7 +389,7 @@ function renderViewer() {
       const end = Math.min(offset + 60, state.rows.length);
       for (; offset < end; offset++) {
         const row = state.rows[offset];
-        viewer.append(renderNode(row.node, row.path, formatPath(row.path), 0));
+        viewer.append(renderNode(row.node, row.path, `${formatPath(row.path)} Item #${row.path.at(-1) + 1}`, 0));
       }
       if (offset < state.rows.length) viewer.append(button(`Show more records (${number(state.rows.length - offset)} remaining)`, 'load-more', event => { event.currentTarget.remove(); appendBatch(); }));
     }
