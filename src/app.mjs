@@ -4,7 +4,7 @@ import { BUNDLED_SCHEMAS } from './schema-presets.mjs';
 import { SCHEMA_STORAGE_KEY, bundledSchemas, readSavedSchemas, saveSchema, deleteSchema, sameSelection, rememberedSchemaId, rememberSchemaId } from './schemas.mjs';
 
 const $ = id => document.getElementById(id);
-const state = { worker: null, pending: null, request: 0, latestView: 0, selection: newSelection(), fields: [], fieldMap: new Map(), expanded: new Set(), fieldLimit: 160, view: 'readable', tree: null, rows: [], report: [], source: '', name: '', nodes: 0, visible: 0, loaded: false, fieldQuery: '', query: '', format: 'json', sourceLimit: 60000 };
+const state = { worker: null, pending: null, request: 0, latestView: 0, selection: newSelection(), fields: [], fieldMap: new Map(), expanded: new Set(), arrayTables: new Set(), fieldLimit: 160, view: 'readable', tree: null, rows: [], report: [], source: '', name: '', nodes: 0, visible: 0, loaded: false, fieldQuery: '', query: '', format: 'json', sourceLimit: 60000 };
 const schemaState = { saved: [], bundled: bundledSchemas(BUNDLED_SCHEMAS), activeId: null, editingId: null };
 const number = value => value.toLocaleString();
 const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
@@ -66,6 +66,7 @@ function loadDocument(source, name = 'pasted.json', demo = false) {
       if (state.pending !== worker) return;
       state.worker?.terminate(); state.worker = worker; state.pending = null;
       Object.assign(state, { source, name: data.format === 'jsonl' && name === 'pasted.json' ? 'pasted.jsonl' : name, fields: data.fields, nodes: data.nodes, loaded: true, format: data.format, query: '', fieldQuery: '', fieldLimit: 160, sourceLimit: 60000 });
+      state.arrayTables.clear();
       state.fieldMap = new Map(data.fields.map(field => [field.id, field]));
       state.expanded = new Set(data.fields.filter(field => field.path.length < 2).map(field => field.id));
       if (data.schemaMatches === false && activeSchema()?.id === schemaIdAtLoad && schemaSelectionAtLoad && sameSelection(state.selection, schemaSelectionAtLoad)) {
@@ -296,12 +297,38 @@ function renderNode(node, path = [], key = 'Document', depth = 0) {
   const summary = el('summary');
   const count = node.children.length;
   summary.append(el('span', 'node-title', String(key)), el('span', 'type-chip', node.type), el('span', 'node-meta', `${number(count)}${node.total !== count ? ` / ${number(node.total)}` : ''} ${node.type === 'array' ? 'items' : 'fields'}`), pathCopy(path));
-  group.append(summary);
+  const children = el('div', 'node-children');
+  const tableId = JSON.stringify(path);
+  let tableToggle;
+  if (node.type === 'array') {
+    tableToggle = button(state.arrayTables.has(tableId) ? 'View as list' : 'View as table', 'array-view-toggle', event => {
+      event.preventDefault(); event.stopPropagation();
+      if (state.arrayTables.has(tableId)) state.arrayTables.delete(tableId);
+      else state.arrayTables.add(tableId);
+      initialized = false;
+      group.open = true;
+      populate();
+    });
+    tableToggle.setAttribute('aria-pressed', String(state.arrayTables.has(tableId)));
+    tableToggle.setAttribute('aria-label', `${tableToggle.textContent} for ${formatPath(path)}`);
+    summary.append(tableToggle);
+  }
+  group.append(summary, children);
   let initialized = false;
   function populate() {
     if (initialized || !group.open) return;
     initialized = true;
-    const children = el('div', 'node-children');
+    children.replaceChildren();
+    if (tableToggle) {
+      const tableMode = state.arrayTables.has(tableId);
+      tableToggle.textContent = tableMode ? 'View as list' : 'View as table';
+      tableToggle.setAttribute('aria-pressed', String(tableMode));
+      tableToggle.setAttribute('aria-label', `${tableToggle.textContent} for ${formatPath(path)}`);
+      if (tableMode) {
+        children.append(count ? renderTable(node.children.map(child => ({ ...child, path: [...path, child.key] }))) : el('div', 'empty-value', node.total ? 'All child fields are hidden.' : '[] Empty array'));
+        return;
+      }
+    }
     if (count === 0) children.append(el('div', 'empty-value', node.total ? 'All child fields are hidden.' : node.type === 'array' ? '[] Empty array' : '{} Empty object'));
     let offset = 0;
     function appendBatch() {
@@ -312,7 +339,7 @@ function renderNode(node, path = [], key = 'Document', depth = 0) {
       }
       if (offset < count) children.append(button(`Show next ${Math.min(60, count - offset)} (${number(count - offset)} remaining)`, 'load-more', event => { event.currentTarget.remove(); appendBatch(); }));
     }
-    appendBatch(); group.append(children);
+    appendBatch();
   }
   group.addEventListener('toggle', populate);
   group.open = depth < 2 || (Boolean(state.query) && depth < 4);
@@ -326,8 +353,7 @@ function emptyState(title, reset = false) {
   return div;
 }
 
-function renderTable() {
-  const rows = state.rows;
+function renderTable(rows = state.rows) {
   if (!rows.length) return emptyState('Empty array');
   const keys = [], known = new Set();
   for (const row of rows) {
