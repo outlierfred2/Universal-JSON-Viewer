@@ -22,6 +22,13 @@
 .path-copy,.path-copy:hover,.node-group>summary:before,.field-expand{color:#000}
 .modal textarea,.source-text{background:#fff}
 
+/* Larger field names and values for comfortable reading. */
+.field-name{font-size:16px;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
+.field-types{font-size:11px}
+.field-legend{font-size:10px}
+.node-title,.value-heading .node-title,.data-table th{font-size:16px}
+.value-text,.value-text.string{font-size:11pt}
+
 .app-header{gap:24px}
 .brand,.header-actions{flex-shrink:0}
 .header-document{flex:1;min-width:0}
