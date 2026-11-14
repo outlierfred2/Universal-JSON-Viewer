@@ -29,11 +29,11 @@
 .node-title,.value-heading .node-title,.data-table th{font-size:16px}
 .value-text,.value-text.string{font-size:11pt}
 
-/* Parent colors repeat by nesting level; leaf fields inherit their parent's rail. */
-.node-parent[data-group-color="0"]{--group-color:#5080bd;--group-tint:#eef4fc}
-.node-parent[data-group-color="1"]{--group-color:#338a7c;--group-tint:#edf7f4}
-.node-parent[data-group-color="2"]{--group-color:#8a68b4;--group-tint:#f5f0fa}
-.node-parent[data-group-color="3"]{--group-color:#b18435;--group-tint:#fcf6e9}
+/* Stable branch colors; leaf fields inherit their parent's rail. */
+.node-parent[data-group-color="0"]{--group-color:#386db1;--group-tint:#deebfc}
+.node-parent[data-group-color="1"]{--group-color:#237e69;--group-tint:#dcf2e9}
+.node-parent[data-group-color="2"]{--group-color:#8253ad;--group-tint:#eee0fa}
+.node-parent[data-group-color="3"]{--group-color:#a77419;--group-tint:#fff0cc}
 .node-group.node-parent,.node-group.node-value{border-left:3px solid var(--group-color,#dcdce5)}
 .node-group.node-parent>summary{background:var(--group-tint);color:#000}
 

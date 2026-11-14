@@ -269,6 +269,14 @@ function arrayItemLabel(index) {
   return `[${index}] Item #${index + 1}`;
 }
 
+function groupColorForPath(path) {
+  return path.reduce((parentColor, key) => {
+    const seed = typeof key === 'number' ? key : [...key].reduce((hash, character) => (hash * 31 + character.codePointAt(0)) >>> 0, 0);
+    // Choose one of the other three colors so a nested parent always changes color.
+    return (parentColor + 1 + seed % 3) % 4;
+  }, 0);
+}
+
 function renderNode(node, path = [], key = 'Document', depth = 0) {
   if (!node.children) {
     const row = el('details', 'node node-group node-value');
@@ -284,7 +292,7 @@ function renderNode(node, path = [], key = 'Document', depth = 0) {
     return row;
   }
   const group = el('details', 'node node-group node-parent');
-  group.dataset.groupColor = depth % 4;
+  group.dataset.groupColor = groupColorForPath(path);
   const summary = el('summary');
   const count = node.children.length;
   summary.append(el('span', 'node-title', String(key)), el('span', 'type-chip', node.type), el('span', 'node-meta', `${number(count)}${node.total !== count ? ` / ${number(node.total)}` : ''} ${node.type === 'array' ? 'items' : 'fields'}`), pathCopy(path));
