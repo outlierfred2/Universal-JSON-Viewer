@@ -29,6 +29,14 @@
 .node-title,.value-heading .node-title,.data-table th{font-size:16px}
 .value-text,.value-text.string{font-size:11pt}
 
+/* Parent colors repeat by nesting level; leaf fields inherit their parent's rail. */
+.node-parent[data-group-color="0"]{--group-color:#5080bd;--group-tint:#eef4fc}
+.node-parent[data-group-color="1"]{--group-color:#338a7c;--group-tint:#edf7f4}
+.node-parent[data-group-color="2"]{--group-color:#8a68b4;--group-tint:#f5f0fa}
+.node-parent[data-group-color="3"]{--group-color:#b18435;--group-tint:#fcf6e9}
+.node-group.node-parent,.node-group.node-value{border-left:3px solid var(--group-color,#dcdce5)}
+.node-group.node-parent>summary{background:var(--group-tint);color:#000}
+
 .app-header{gap:24px}
 .brand,.header-actions{flex-shrink:0}
 .header-document{flex:1;min-width:0}

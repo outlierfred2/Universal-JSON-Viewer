@@ -283,7 +283,8 @@ function renderNode(node, path = [], key = 'Document', depth = 0) {
     if (value.length > 5000) body.append(button(`Show full value (${number(value.length)} characters)`, 'load-more', event => { content.textContent = value; event.currentTarget.remove(); }));
     return row;
   }
-  const group = el('details', 'node node-group');
+  const group = el('details', 'node node-group node-parent');
+  group.dataset.groupColor = depth % 4;
   const summary = el('summary');
   const count = node.children.length;
   summary.append(el('span', 'node-title', String(key)), el('span', 'type-chip', node.type), el('span', 'node-meta', `${number(count)}${node.total !== count ? ` / ${number(node.total)}` : ''} ${node.type === 'array' ? 'items' : 'fields'}`), pathCopy(path));
