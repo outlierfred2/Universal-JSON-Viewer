@@ -51,7 +51,6 @@
             <label class="schema-label" for="schema-select">Saved schema</label>
             <div class="schema-picker"><select id="schema-select"><option value="">Custom selection</option></select><button class="button outline small" id="schema-save">Save</button><button class="button outline small" id="schema-edit" disabled>Edit</button></div>
             <div class="selection-actions"><button class="button outline small" id="selection-copy"><span aria-hidden="true">⧉</span> Copy selection</button><button class="button outline small" id="selection-open">Paste selection</button></div>
-            <div class="selection-file-actions"><button class="text-button" id="selection-import">Import file</button><button class="text-button" id="selection-download">Download selection</button></div>
           </div>
           <div class="field-tools"><label class="sr-only" for="field-search">Find a field</label><div class="search-wrap"><span aria-hidden="true">⌕</span><input id="field-search" type="search" placeholder="Find a field…" autocomplete="off"></div><label class="sr-only" for="selection-mode">Field visibility mode</label><select id="selection-mode"><option value="all">Show all except hidden</option><option value="selected">Show only selected fields</option></select></div>
           <div class="field-legend"><span>FIELD / TYPE</span><span>SHOW · HIDE</span></div>
@@ -70,7 +69,6 @@
   </main>
 
   <input id="file-input" type="file" accept=".json,.jsonl,application/json,application/x-ndjson" hidden>
-  <input id="selection-file" type="file" accept=".json,application/json" hidden>
 
   <dialog id="schema-dialog" class="modal">
     <form id="schema-form"><div class="modal-header"><h2 id="schema-dialog-title">Save schema</h2><button type="button" class="icon-button" data-close="schema-dialog" aria-label="Close schema dialog">×</button></div><label class="schema-name-label" for="schema-name">Name</label><input id="schema-name" class="schema-name-input" type="text" maxlength="80" autocomplete="off" required><p id="schema-error" class="inline-error" role="alert" hidden></p><div class="modal-footer"><button id="schema-delete" class="button danger" type="button" hidden>Delete</button><button type="button" class="button ghost" data-close="schema-dialog">Cancel</button><button id="schema-submit" class="button primary" type="submit">Save schema</button></div></form>

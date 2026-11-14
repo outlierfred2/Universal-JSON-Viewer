@@ -93,7 +93,7 @@ The copied configuration contains paths and options, never document values:
 }
 ```
 
-`collection` is optional. The Fields sidebar also supports **Download selection** and **Import file**. If clipboard writing is unavailable, a dialog provides selectable text for manual copying. Pasting uses an ordinary textarea and does not request clipboard-read permission.
+`collection` is optional. If clipboard writing is unavailable, a dialog provides selectable text for manual copying. Pasting uses an ordinary textarea and does not request clipboard-read permission.
 
 Paths support root `$`, dot keys, JSON-quoted bracket keys (`$["a.b"]`), array indexes (`$[0]`), and array wildcards (`$[*]`). They are a deliberately limited path syntax, not a full JSONPath query engine. Object keys and array indexes are typed separately; an object key `"*"` is not a wildcard. No path expressions or code are evaluated. Field-picker selections use wildcards; copied individual value paths use concrete source indexes.
 

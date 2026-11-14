@@ -34,7 +34,6 @@ function showError(message) {
 }
 
 function bytes(size) { return size >= 1024 * 1024 ? `${(size / 1024 / 1024).toFixed(1)} MB` : size >= 1024 ? `${(size / 1024).toFixed(1)} KB` : `${size} B`; }
-function safeFilename(suffix) { return state.name.replace(/\.(json|jsonl)$/i, '').replace(/[^\w.-]/g, '_') + suffix; }
 function download(text, name, type = 'application/json') {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const link = el('a'); link.href = url; link.download = name; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -454,14 +453,6 @@ $('input-form').addEventListener('submit', event => { event.preventDefault(); $(
 $('selection-open').addEventListener('click', () => { $('selection-error').hidden = true; $('import-dialog').showModal(); $('selection-text').focus(); });
 $('selection-copy').addEventListener('click', () => copyText(JSON.stringify(state.selection, null, 2)));
 $('import-form').addEventListener('submit', event => { event.preventDefault(); try { importSelection($('selection-text').value); } catch (error) { $('selection-error').textContent = error.message; $('selection-error').hidden = false; } });
-$('selection-download').addEventListener('click', () => download(JSON.stringify(state.selection, null, 2), safeFilename('.selection.json')));
-$('selection-import').addEventListener('click', () => $('selection-file').click());
-$('selection-file').addEventListener('change', async event => {
-  const file = event.target.files[0]; event.target.value = '';
-  if (!file) return;
-  if (file.size > 256 * 1024) { notify('Selection files must be smaller than 256 KB.', true); return; }
-  try { importSelection(await file.text()); } catch (error) { notify(error.message, true); }
-});
 $('source-download').addEventListener('click', () => download(state.source, state.name, state.format === 'jsonl' ? 'application/x-ndjson' : 'application/json'));
 $('clear-document').addEventListener('click', () => {
   state.worker?.terminate(); state.pending?.terminate();
