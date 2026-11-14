@@ -53,7 +53,7 @@ async function copyText(text, title = 'Copy field selection', success = 'Field s
 
 function loadDocument(source, name = 'pasted.json', demo = false) {
   if (!source.trim()) { showError('JSON is empty.'); return; }
-  if (new TextEncoder().encode(source).length > LIMITS.bytes) { showError('The maximum document size is 25 MB.'); return; }
+  if (new TextEncoder().encode(source).length > LIMITS.bytes) { showError('The maximum document size is 200 MB.'); return; }
   state.pending?.terminate();
   busy('Reading every field…');
   const worker = new Worker(new URL('./worker.mjs', import.meta.url), { type: 'module' });
@@ -99,7 +99,7 @@ function loadDocument(source, name = 'pasted.json', demo = false) {
 
 async function readFile(file) {
   if (!file) return;
-  if (file.size > LIMITS.bytes) { showError('The maximum document size is 25 MB.'); return; }
+  if (file.size > LIMITS.bytes) { showError('The maximum document size is 200 MB.'); return; }
   try { loadDocument(await file.text(), file.name); } catch (error) { showError(`Could not read the file: ${error.message}`); }
 }
 

@@ -4,7 +4,7 @@ let document, index, currentTree;
 self.onmessage = ({ data }) => {
   try {
     if (data.type === 'load') {
-      if (new TextEncoder().encode(data.text).length > LIMITS.bytes) throw new Error('The maximum document size is 25 MB.');
+      if (new TextEncoder().encode(data.text).length > LIMITS.bytes) throw new Error('The maximum document size is 200 MB.');
       const parsed = parseDocument(data.text);
       const found = discover(parsed.document);
       document = parsed.document; index = found;

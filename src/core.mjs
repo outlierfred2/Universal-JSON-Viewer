@@ -1,6 +1,6 @@
 // Paths are typed segments: strings are object keys, numbers are indexes, null is an array wildcard.
 // No expressions are evaluated, including in imported selections.
-export const LIMITS = Object.freeze({ bytes: 25 * 1024 * 1024, nodes: 1_000_000, depth: 128, fields: 20_000, rules: 1000 });
+export const LIMITS = Object.freeze({ bytes: 200 * 1024 * 1024, nodes: 1_000_000, depth: 128, fields: 20_000, rules: 1000 });
 export const kind = value => value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
 export const pathId = path => JSON.stringify(path);
 export const formatPath = path => '$' + path.map(segment => segment === null ? '[*]' : typeof segment === 'number' ? `[${segment}]` : /^[A-Za-z_$][\w$]*$/.test(segment) ? `.${segment}` : `[${JSON.stringify(segment)}]`).join('');
