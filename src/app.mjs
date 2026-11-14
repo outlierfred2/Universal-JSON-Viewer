@@ -296,11 +296,12 @@ function renderNode(node, path = [], key = 'Document', depth = 0) {
   group.dataset.groupColor = groupColorForPath(path);
   const summary = el('summary');
   const count = node.children.length;
-  summary.append(el('span', 'node-title', String(key)), el('span', 'type-chip', node.type), el('span', 'node-meta', `${number(count)}${node.total !== count ? ` / ${number(node.total)}` : ''} ${node.type === 'array' ? 'items' : 'fields'}`), pathCopy(path));
+  summary.append(el('span', 'node-title', String(key)));
   const children = el('div', 'node-children');
   const tableId = JSON.stringify(path);
   let tableToggle;
   if (node.type === 'array') {
+    summary.className = 'array-heading';
     tableToggle = button(state.arrayTables.has(tableId) ? 'View as list' : 'View as table', 'array-view-toggle', event => {
       event.preventDefault(); event.stopPropagation();
       if (state.arrayTables.has(tableId)) state.arrayTables.delete(tableId);
@@ -313,6 +314,7 @@ function renderNode(node, path = [], key = 'Document', depth = 0) {
     tableToggle.setAttribute('aria-label', `${tableToggle.textContent} for ${formatPath(path)}`);
     summary.append(tableToggle);
   }
+  summary.append(el('span', 'type-chip', node.type), el('span', 'node-meta', `${number(count)}${node.total !== count ? ` / ${number(node.total)}` : ''} ${node.type === 'array' ? 'items' : 'fields'}`), pathCopy(path));
   group.append(summary, children);
   let initialized = false;
   function populate() {
