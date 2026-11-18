@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-import { discover, project, newSelection, collectRows, formatPath } from '../src/core.mjs';
+import { saveSchema, readSavedSchemas, sameSelection } from '../src/schemas.mjs';
+import { discover, project, newSelection, collectRows, formatPath, validateSelection, parseSelection, toggleFieldSelection } from '../src/core.mjs';
 
 const source = await readFile(new URL('../src/app.mjs', import.meta.url), 'utf8');
 const renderer = source.slice(source.indexOf('function arrayItemLabel('), source.indexOf('function renderViewer('));
@@ -17,7 +18,7 @@ function element(tag, className, textContent) {
     get open() { return this.isOpen; },
   };
 }
-const context = vm.createContext({ el: element, state: { query: '', arrayTables: new Set() }, formatPath, number: String, pathCopy: () => element('button'), button: (label, className, action) => {
+const context = vm.createContext({ el: element, state: { query: '', selection: newSelection() }, validateSelection, renderSchemas() {}, notify(message) { throw new Error(message); }, formatPath, number: String, pathCopy: () => element('button'), button: (label, className, action) => {
   const control = element('button', className, label);
   control.events.click = action;
   return control;
@@ -58,7 +59,7 @@ function toggleArray(group) {
 }
 
 test('nested arrays switch independently and tables retain filtered source indexes and values', () => {
-  context.state.arrayTables.clear();
+  context.state.selection = newSelection();
   const document = { records: [{ name: 'hidden' }, { name: '', enabled: false, score: 0, extra: null }, { other: '<script>' }] };
   const tree = project(document, { ...newSelection(), exclude: ['$.records[0]'] });
   const root = context.renderNode(tree);
@@ -83,21 +84,53 @@ test('nested arrays switch independently and tables retain filtered source index
 });
 
 test('array tables handle mixed items, empty arrays, and additional row batches', () => {
-  context.state.arrayTables.clear();
+  context.state.selection = newSelection();
   const mixed = context.renderNode(project([false, null, ['nested'], { Value: 0 }, {}], newSelection()));
   toggleArray(mixed);
   const table = descendants(mixed, 'table')[0];
   assert.deepEqual(descendants(table.children[0], 'th').map(cell => cell.textContent), ['#', 'Value', 'Value']);
   assert.equal(table.children[1].children.length, 5);
-  context.state.arrayTables.clear();
+  context.state.selection = newSelection();
   const empty = context.renderNode(project([], newSelection()));
   toggleArray(empty);
   assert.equal(empty.children[1].children[0].textContent, '[] Empty array');
-  context.state.arrayTables.clear();
+  context.state.selection = newSelection();
   const large = context.renderNode(project(Array.from({ length: 81 }, (_, i) => i), newSelection()));
   toggleArray(large);
   const shell = large.children[1].children[0];
   assert.equal(descendants(shell, 'tbody')[0].children.length, 80);
   shell.children[1].events.click();
   assert.equal(descendants(shell, 'tbody')[0].children.length, 81);
+});
+
+
+test('table modes survive saving, sharing, field edits and loading another document', () => {
+  context.state.selection = newSelection();
+  const document = { records: [{ values: [1, 2], hidden: true }, { values: [3] }], other: [] };
+  const tree = project(document, context.state.selection);
+  const records = context.renderNode(tree).children[1].children[0];
+  const firstItem = records.children[1].children[0];
+  firstItem.open = true;
+  const firstValues = firstItem.children[1].children[0];
+  toggleArray(firstValues);
+  assert.deepEqual(Array.from(context.state.selection.tableArrays), ['$.records[0].values']);
+  const original = context.state.selection;
+  const disk = { value: null, getItem() { return this.value; }, setItem(key, value) { this.value = value; } };
+  saveSchema(disk, { name: 'Tables', selection: original });
+  const shared = parseSelection(JSON.stringify(original));
+  assert.deepEqual(shared, readSavedSchemas(disk)[0].selection);
+  assert.equal(sameSelection(shared, newSelection()), false);
+  const fields = discover(document).fields;
+  const edited = toggleFieldSelection(fields, shared, fields.find(field => field.label === '$.records[*].hidden'), 'hide');
+  assert.deepEqual(edited.tableArrays, ['$.records[0].values']);
+  const later = { records: [{ values: ['new data'] }, { values: ['list'] }] };
+  context.state.selection = shared;
+  const restored = context.renderNode(project(later, shared));
+  parentGroups(restored);
+  assert.equal(descendants(restored, 'table').length, 1);
+  assert.equal(descendants(restored, 'tbody')[0].children[0].children[1].children[0].textContent, 'new data');
+  context.state.selection = parseSelection(JSON.stringify(newSelection()));
+  const legacy = context.renderNode(project(later, context.state.selection));
+  parentGroups(legacy);
+  assert.equal(descendants(legacy, 'table').length, 0, 'old presets clear table preferences');
 });

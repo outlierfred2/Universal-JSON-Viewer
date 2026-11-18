@@ -112,7 +112,7 @@ export function deleteSchema(storage, id) {
 export function sameSelection(left, right) {
   const canonical = value => {
     const selection = validateSelection(value);
-    return JSON.stringify({ version: selection.version, mode: selection.mode, collection: selection.collection, include: [...selection.include].sort(), exclude: [...selection.exclude].sort(), includeSelf: [...(selection.includeSelf || [])].sort(), excludeSelf: [...(selection.excludeSelf || [])].sort() });
+    return JSON.stringify({ version: selection.version, mode: selection.mode, collection: selection.collection, include: [...selection.include].sort(), exclude: [...selection.exclude].sort(), includeSelf: [...(selection.includeSelf || [])].sort(), excludeSelf: [...(selection.excludeSelf || [])].sort(), tableArrays: [...(selection.tableArrays || [])].sort() });
   };
   return canonical(left) === canonical(right);
 }

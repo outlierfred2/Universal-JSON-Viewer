@@ -178,3 +178,15 @@ test('large heterogeneous array discovers late fields and keeps rendering inputs
   assert.equal(tree.children.length, 1);
   assert.equal(tree.children[0].key, 11999);
 });
+
+
+test('table array preferences are validated and preserve legacy version-1 selections', () => {
+  assert.deepEqual(validateSelection(newSelection()), newSelection());
+  assert.deepEqual(validateSelection({ ...newSelection(), tableArrays: [] }), newSelection());
+  const clean = validateSelection({ ...newSelection(), tableArrays: ['records[0].items', '$.records[0].items', '$["a.b"]', '$'] });
+  assert.deepEqual(clean.tableArrays, ['$.records[0].items', '$["a.b"]', '$']);
+  assert.deepEqual(parseSelection(JSON.stringify(clean)), clean);
+  for (const tableArrays of [null, 'bad', [7], ['$.rows[*]'], Array(LIMITS.rules + 1).fill('$')]) {
+    assert.throws(() => validateSelection({ ...newSelection(), tableArrays }));
+  }
+});

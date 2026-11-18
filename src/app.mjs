@@ -4,7 +4,7 @@ import { BUNDLED_SCHEMAS } from './schema-presets.mjs';
 import { SCHEMA_STORAGE_KEY, bundledSchemas, readSavedSchemas, saveSchema, deleteSchema, sameSelection, rememberedSchemaId, rememberSchemaId } from './schemas.mjs';
 
 const $ = id => document.getElementById(id);
-const state = { worker: null, pending: null, request: 0, latestView: 0, selection: newSelection(), fields: [], fieldMap: new Map(), expanded: new Set(), arrayTables: new Set(), fieldLimit: 160, view: 'readable', tree: null, rows: [], report: [], source: '', name: '', nodes: 0, visible: 0, loaded: false, fieldQuery: '', query: '', format: 'json', sourceLimit: 60000 };
+const state = { worker: null, pending: null, request: 0, latestView: 0, selection: newSelection(), fields: [], fieldMap: new Map(), expanded: new Set(), fieldLimit: 160, view: 'readable', tree: null, rows: [], report: [], source: '', name: '', nodes: 0, visible: 0, loaded: false, fieldQuery: '', query: '', format: 'json', sourceLimit: 60000 };
 const schemaState = { saved: [], bundled: bundledSchemas(BUNDLED_SCHEMAS), activeId: null, editingId: null };
 const number = value => value.toLocaleString();
 const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
@@ -66,7 +66,6 @@ function loadDocument(source, name = 'pasted.json', demo = false) {
       if (state.pending !== worker) return;
       state.worker?.terminate(); state.worker = worker; state.pending = null;
       Object.assign(state, { source, name: data.format === 'jsonl' && name === 'pasted.json' ? 'pasted.jsonl' : name, fields: data.fields, nodes: data.nodes, loaded: true, format: data.format, query: '', fieldQuery: '', fieldLimit: 160, sourceLimit: 60000 });
-      state.arrayTables.clear();
       state.fieldMap = new Map(data.fields.map(field => [field.id, field]));
       state.expanded = new Set(data.fields.filter(field => field.path.length < 2).map(field => field.id));
       if (data.schemaMatches === false && activeSchema()?.id === schemaIdAtLoad && schemaSelectionAtLoad && sameSelection(state.selection, schemaSelectionAtLoad)) {
@@ -298,19 +297,22 @@ function renderNode(node, path = [], key = 'Document', depth = 0) {
   const count = node.children.length;
   summary.append(el('span', 'node-title', String(key)));
   const children = el('div', 'node-children');
-  const tableId = JSON.stringify(path);
+  const tableId = formatPath(path);
   let tableToggle;
   if (node.type === 'array') {
     summary.className = 'array-heading';
-    tableToggle = button(state.arrayTables.has(tableId) ? 'View as list' : 'View as table', 'array-view-toggle', event => {
+    tableToggle = button((state.selection.tableArrays || []).includes(tableId) ? 'View as list' : 'View as table', 'array-view-toggle', event => {
       event.preventDefault(); event.stopPropagation();
-      if (state.arrayTables.has(tableId)) state.arrayTables.delete(tableId);
-      else state.arrayTables.add(tableId);
+      const tableArrays = state.selection.tableArrays || [];
+      try {
+        state.selection = validateSelection({ ...state.selection, tableArrays: tableArrays.includes(tableId) ? tableArrays.filter(id => id !== tableId) : [...tableArrays, tableId] });
+      } catch (error) { notify(error.message, true); return; }
+      renderSchemas();
       initialized = false;
       group.open = true;
       populate();
     });
-    tableToggle.setAttribute('aria-pressed', String(state.arrayTables.has(tableId)));
+    tableToggle.setAttribute('aria-pressed', String((state.selection.tableArrays || []).includes(tableId)));
     tableToggle.setAttribute('aria-label', `${tableToggle.textContent} for ${formatPath(path)}`);
     summary.append(tableToggle);
   }
@@ -322,7 +324,7 @@ function renderNode(node, path = [], key = 'Document', depth = 0) {
     initialized = true;
     children.replaceChildren();
     if (tableToggle) {
-      const tableMode = state.arrayTables.has(tableId);
+      const tableMode = (state.selection.tableArrays || []).includes(tableId);
       tableToggle.textContent = tableMode ? 'View as list' : 'View as table';
       tableToggle.setAttribute('aria-pressed', String(tableMode));
       tableToggle.setAttribute('aria-label', `${tableToggle.textContent} for ${formatPath(path)}`);

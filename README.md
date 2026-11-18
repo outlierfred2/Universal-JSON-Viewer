@@ -34,17 +34,17 @@ Open `dist/standalone.html` directly in a browser. This is the same app with inl
 - Search applies only to visible fields and values in Readable/Table views; it retains matching ancestors. Press `/` to focus it. Field-picker search also searches source example values.
 - **Original JSON** shows the unchanged input, including hidden fields. Field selections are display preferences and do not sanitize the source. **Download original JSON** also contains the complete source.
 
-Input, original values, and the active view are held in memory for the current tab. Refreshing clears them. Named saved schemas persist in browser storage and remain available after refreshing. The schema library stores selection rules, not document values.
+Input, original values, and the active view are held in memory for the current tab. Refreshing clears them. Named saved schemas persist in browser storage and remain available after refreshing. The schema library stores selection rules and array display preferences, not document values.
 
 ## Saved schemas
 
-The **Saved schema** selector is in the Fields sidebar. Choose fields, mode, and collection, then click **Save**, enter a name, and save the schema. On a later document, selecting its name immediately restores those settings without pasting JSON. Matching field branches expand in the picker. Missing fields use the existing match report.
+The **Saved schema** selector is in the Fields sidebar. Choose fields, mode, collection, and which arrays to view as tables, then click **Save**, enter a name, and save the schema. On a later document, selecting its name immediately restores those settings without pasting JSON. Matching field branches expand in the picker. Missing fields use the existing match report.
 
 The selector lists local schemas alphabetically first, followed by alphabetized built-in schemas.
 
 The last selected schema is remembered in the browser and restored after refresh. An active schema is highlighted in purple. When a new document is opened or pasted, the app clears the selection and remembered choice if none of the schema's included paths exist, or its selected collection is missing or is not an array. Partial matches are allowed for optional fields. For exclude-only schemas, at least one excluded path must exist; an all-fields schema without rules fits any document. Reset or choosing Custom selection clears the remembered choice. This checks field paths, not full JSON Schema type validation.
 
-Changing the fields, visibility mode, or collection marks the chosen schema **(modified)**. Changes do not overwrite the saved version. **Edit** updates its rules and name, or deletes it; **Save** creates a separate named schema. Names must be unique. Deleting a schema leaves the current view intact as a custom selection. **Reset** resets the active selection and retains the schema library.
+Changing the fields, visibility mode, collection, or an array’s table/list view marks the chosen schema **(modified)**. Changes do not overwrite the saved version. **Edit** updates its rules and name, or deletes it; **Save** creates a separate named schema. Names must be unique. Deleting a schema leaves the current view intact as a custom selection. **Reset** resets the active selection and retains the schema library.
 
 User-created schemas are saved for the current browser and site address, with no backend. They do not automatically move between devices or browsers; use the existing clipboard/file controls to transfer a selection, then save it under a name at the destination. Storage errors are shown explicitly. Keep exports for backup. The library supports 100 schemas and 2 MB of saved settings.
 
@@ -90,11 +90,12 @@ The copied configuration contains paths and options, never document values:
   "mode": "selected",
   "include": ["$.events[*].role", "$.events[*].content"],
   "exclude": ["$.events[*].content[*].debug"],
-  "collection": "$.events"
+  "collection": "$.events",
+  "tableArrays": ["$.events[1].content"]
 }
 ```
 
-`collection` is optional. If clipboard writing is unavailable, a dialog provides selectable text for manual copying. Pasting uses an ordinary textarea and does not request clipboard-read permission.
+`collection` and `tableArrays` are optional. `tableArrays` lists the arrays shown as inline tables, using concrete source paths such as `$.events[1].content` (or `$` for the root array). Each array is independent; indexes refer to source positions rather than item identity. Saving, copying, and pasting preserve these choices. Missing paths are ignored, and presets without `tableArrays` use list views. **Reset** clears these preferences too. If clipboard writing is unavailable, a dialog provides selectable text for manual copying. Pasting uses an ordinary textarea and does not request clipboard-read permission.
 
 Paths support root `$`, dot keys, JSON-quoted bracket keys (`$["a.b"]`), array indexes (`$[0]`), and array wildcards (`$[*]`). They are a deliberately limited path syntax, not a full JSONPath query engine. Object keys and array indexes are typed separately; an object key `"*"` is not a wildcard. No path expressions or code are evaluated. Field-picker selections use wildcards; copied individual value paths use concrete source indexes.
 

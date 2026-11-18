@@ -67,11 +67,15 @@ export function validateSelection(input) {
     if (!Array.isArray(input[key]) || input[key].length > LIMITS.rules) throw new Error(`${key} must be an array with at most ${LIMITS.rules} paths.`);
     lists[key] = [...new Set(input[key].map(path => formatPath(parsePath(path))))];
   }
-  // Own-value rules preserve mixed scalar/structured values when a parent is split.
-  for (const key of ['includeSelf', 'excludeSelf']) {
+  // Optional own-value rules and array display preferences remain backward compatible.
+  for (const key of ['includeSelf', 'excludeSelf', 'tableArrays']) {
     if (input[key] === undefined) continue;
     if (!Array.isArray(input[key]) || input[key].length > LIMITS.rules) throw new Error(`${key} must be an array with at most ${LIMITS.rules} paths.`);
-    if (input[key].length) lists[key] = [...new Set(input[key].map(path => formatPath(parsePath(path))))];
+    if (input[key].length) lists[key] = [...new Set(input[key].map(path => {
+      const segments = parsePath(path);
+      if (key === 'tableArrays' && segments.includes(null)) throw new Error('Table array paths must use concrete indexes, not wildcards.');
+      return formatPath(segments);
+    }))];
   }
   const collection = input.collection == null ? null : formatPath(parsePath(input.collection));
   return { version: 1, mode: input.mode, ...lists, collection };

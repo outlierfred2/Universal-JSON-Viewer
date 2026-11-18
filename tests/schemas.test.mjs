@@ -156,3 +156,15 @@ test('schema fit requires a valid collection and handles exclude-only schemas', 
   assert.equal(schemaFits({ unrelated: 1 }, { ...newSelection(), exclude: ['$.debug'] }), false);
   assert.equal(schemaFits({ unrelated: 1 }, newSelection()), true);
 });
+
+
+test('table preferences participate in modified detection and remain saved snapshots', () => {
+  const selection = { ...newSelection(), tableArrays: ['$.b', '$.a'] };
+  assert.equal(sameSelection(selection, { ...newSelection(), tableArrays: ['a', '$.b'] }), true);
+  assert.equal(sameSelection(selection, newSelection()), false);
+  assert.equal(sameSelection(newSelection(), { ...newSelection(), tableArrays: [] }), true);
+  const disk = storage();
+  saveSchema(disk, { name: 'Table preset', selection });
+  selection.tableArrays.push('$.c');
+  assert.deepEqual(readSavedSchemas(disk)[0].selection.tableArrays, ['$.b', '$.a']);
+});
