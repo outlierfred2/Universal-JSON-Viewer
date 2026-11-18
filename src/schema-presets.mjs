@@ -45,7 +45,8 @@ export const BUNDLED_SCHEMAS = [
         "$[*].weight"
       ],
       "exclude": [],
-      "collection": null
+      "collection": null,
+      "tableArrays": ["$"]
     }
   },
 ];
